@@ -5,10 +5,19 @@ from .routers import auth, todos, admin, users
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-models.Base.metadata.create_all(bind = engine)
+# Try to create tables, but don't fail if database is not available
+# This allows the app to start even if the database connection fails initially
+try:
+    models.Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.warning(f"Could not create database tables: {e}. Tables may already exist or database may not be available yet.")
 
 # Get the directory where this file is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
