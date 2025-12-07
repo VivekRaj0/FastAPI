@@ -7,7 +7,7 @@ import os
 # Fallback to local development URL if not set
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:test1234!@localhost/TodoApplicationDatabase"
+    "postgresql://deploy_database_unr2_user:TkMwVNjpJsrZ8J9xMWKerFexspTnFzFE@dpg-d4qk9gk9c44c73behpbg-a.singapore-postgres.render.com/deploy_database_unr2"
 )
 
 # Render provides DATABASE_URL with postgres://, but SQLAlchemy needs postgresql://
@@ -19,3 +19,4 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
