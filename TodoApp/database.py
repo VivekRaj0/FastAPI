@@ -1,12 +1,38 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from fastapi import FastAPI, Request, status
+from . import models
+from .database import engine
+from .routers import auth, todos, admin, users
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+import os
+import logging
 
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:test1234!@localhost/TodoApplicationDatabase"
+logger = logging.getLogger(__name__)
 
+app = FastAPI()
 
-engine  = create_engine(SQLALCHEMY_DATABASE_URL)
+# Try to create tables, but don't fail if database is not available
+# This allows the app to start even if the database connection fails initially
+try:
+    models.Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.warning(f"Could not create database tables: {e}. Tables may already exist or database may not be available yet.")
 
-SessionLocal = sessionmaker(autocommit = False, autoflush=False, bind=engine)
+# Get the directory where this file is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name='static')
 
-Base = declarative_base()
+@app.get('/')
+def test(request: Request):
+    return RedirectResponse(url="/todos/todo-page", status_code=status.HTTP_302_FOUND)
+
+@app.get('/healthy')
+def health_check():
+    return{'status':'Healthy'}
+
+app.include_router(auth.router)
+app.include_router(todos.router)
+app.include_router(admin.router)
+app.include_router(users.router)
