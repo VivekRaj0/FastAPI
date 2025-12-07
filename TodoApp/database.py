@@ -1,38 +1,21 @@
-from fastapi import FastAPI, Request, status
-from . import models
-from .database import engine
-from .routers import auth, todos, admin, users
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 import os
-import logging
 
-logger = logging.getLogger(__name__)
+# Get database URL from environment variable (Render provides DATABASE_URL)
+# Fallback to local development URL if not set
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:test1234!@localhost/TodoApplicationDatabase"
+)
 
-app = FastAPI()
+# Render provides DATABASE_URL with postgres://, but SQLAlchemy needs postgresql://
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Try to create tables, but don't fail if database is not available
-# This allows the app to start even if the database connection fails initially
-try:
-    models.Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
-except Exception as e:
-    logger.warning(f"Could not create database tables: {e}. Tables may already exist or database may not be available yet.")
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-# Get the directory where this file is located
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name='static')
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-@app.get('/')
-def test(request: Request):
-    return RedirectResponse(url="/todos/todo-page", status_code=status.HTTP_302_FOUND)
-
-@app.get('/healthy')
-def health_check():
-    return{'status':'Healthy'}
-
-app.include_router(auth.router)
-app.include_router(todos.router)
-app.include_router(admin.router)
-app.include_router(users.router)
+Base = declarative_base()
